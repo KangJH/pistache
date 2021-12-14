@@ -26,7 +26,14 @@ jobs:
         arch: [ amd64, arm64, armhf, i386, ppc64el ] # , s390x
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Checkout Debian data
+      uses: actions/checkout@v2
+      with:
+        ref: debian
+        path: debian
 
     # The Debian repository is needed by autopkgtest-build-qemu when building
     # for foreign architectures, since the tool tries to install
@@ -69,9 +76,9 @@ jobs:
     - name: Install autopkgtest from source
       run: |
         mkdir --parent /tmp/autopkgtest-build
-        curl --silent --output /tmp/autopkgtest-build/autopkgtest-master.tar --proto https --tlsv1.3 --http2-prior-knowledge https://salsa.debian.org/ci-team/autopkgtest/-/archive/master/autopkgtest-master.tar
-        tar --extract --file=/tmp/autopkgtest-build/autopkgtest-master.tar --directory=/tmp/autopkgtest-build
-        cd /tmp/autopkgtest-build/autopkgtest-master
+        curl --silent --output /tmp/autopkgtest-build/autopkgtest-5.17.tar --proto https --tlsv1.3 --http2-prior-knowledge https://salsa.debian.org/ci-team/autopkgtest/-/archive/debian/5.17/autopkgtest-debian-5.17.tar
+        tar --extract --file=/tmp/autopkgtest-build/autopkgtest-5.17.tar --directory=/tmp/autopkgtest-build
+        cd /tmp/autopkgtest-build/autopkgtest-debian-5.17
         sudo apt -qq build-dep . --default-release=testing
         DEB_BUILD_OPTIONS=nocheck debuild --unsigned-source --unsigned-changes
         sudo apt -qq install ../autopkgtest*.deb
@@ -83,7 +90,8 @@ jobs:
 
     - name: Build Debian package source
       run: |
-        ./debian/rules get-orig-source
+        uscan
+        cd ../pistache-*/
         dpkg-source --build .
 
     # The increased timeout is needed because the CI can be too slow to boot

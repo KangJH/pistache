@@ -46,7 +46,7 @@ else()
     target_include_directories(pistache PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
 endif()
 
-target_include_directories(pistache PRIVATE ${CMAKE_SOURCE_DIR}/subprojects/hinnant-date/include)
+target_include_directories(pistache PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../subprojects/hinnant-date/include)
 target_include_directories(pistache PUBLIC ${PISTACHE_INCLUDE})
 
 if (BUILD_SHARED_LIBS)
@@ -71,14 +71,14 @@ if (PISTACHE_USE_SSL)
     endif ()
 endif ()
 
-set(Pistache_OUTPUT_NAME "pistache")
 if (BUILD_SHARED_LIBS)
     set_target_properties(pistache_shared PROPERTIES
-        OUTPUT_NAME ${Pistache_OUTPUT_NAME}-${VERSION}
-        SOVERSION ${SONAME_VERSION_MAJOR}.${SONAME_VERSION_MINOR}
+        OUTPUT_NAME ${PROJECT_NAME}
+        VERSION ${pistache_VERSION}
+        SOVERSION ${pistache_VERSION_MAJOR}
     )
 endif ()
 
 set_target_properties(pistache_static PROPERTIES
-    OUTPUT_NAME ${Pistache_OUTPUT_NAME}
+    OUTPUT_NAME ${PROJECT_NAME}
 )

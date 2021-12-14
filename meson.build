@@ -5,7 +5,7 @@
 project(
 	'pistache',
 	'cpp',
-	version: '0.0.002',
+	version: '0.0.3', # In Meson 0.57 this can be replaced with files('version.txt')
 	license: 'Apache-2.0',
 	default_options: [
 		'cpp_std=c++17',
@@ -16,6 +16,10 @@ project(
 	],
 	meson_version: '>=0.50.0'
 )
+
+if host_machine.system() != 'linux'
+	error('Pistache currenly only supports Linux. See https://github.com/pistacheio/pistache/issues/6#issuecomment-242398225 for more information')
+endif
 
 compiler = meson.get_compiler('cpp')
 
@@ -28,7 +32,10 @@ if get_option('b_coverage')
 	add_project_arguments(compiler.get_supported_arguments(['-fstack-protector-all', '--param=ssp-buffer-size=4']), language: 'cpp')
 endif
 
-date_dep = dependency('hinnant-date', fallback: ['hinnant-date', 'date_dep'])
+date_dep = dependency('howardhinnant-date', required: false)
+if not date_dep.found()
+	date_dep = dependency('hinnant-date', fallback: ['hinnant-date', 'date_dep'])
+endif
 deps_libpistache = [
 	dependency('threads'),
 	dependency('RapidJSON', fallback: ['rapidjson', 'rapidjson_dep']),
@@ -49,11 +56,10 @@ int main() {
 	return ++x;
 }
 '''
-has_working_cxx_atomics = compiler.compiles(cxx_atomics_check_code, name: 'std::atomic')
+has_working_cxx_atomics = compiler.links(cxx_atomics_check_code, name: 'std::atomic')
 if (compiler_id == 'clang' or compiler_id == 'gcc') and not has_working_cxx_atomics
 	libatomic_dep = compiler.find_library('atomic')
-	assert(compiler.has_function('__atomic_fetch_add_4', dependencies: libatomic_dep), 'Host compiler appears to require libatomic, but cannot find it.')
-	has_working_cxx_atomics = compiler.compiles(cxx_atomics_check_code, dependencies: libatomic_dep, name: 'std::atomic with libatomic')
+	has_working_cxx_atomics = compiler.links(cxx_atomics_check_code, dependencies: libatomic_dep, name: 'std::atomic with libatomic')
 	assert(has_working_cxx_atomics, 'Host compiler must support std::atomic')
 	deps_libpistache += libatomic_dep
 endif
@@ -68,11 +74,10 @@ int main() {
 	return 0;
 }
 '''
-has_working_cxx_atomics64 = compiler.compiles(cxx_atomics64_check_code, name: 'std::atomic<uint64_t>')
+has_working_cxx_atomics64 = compiler.links(cxx_atomics64_check_code, name: 'std::atomic<uint64_t>')
 if (compiler_id == 'clang' or compiler_id == 'gcc') and not has_working_cxx_atomics64
 	libatomic_dep = compiler.find_library('atomic')
-	assert(compiler.has_function('__atomic_load_8', dependencies: libatomic_dep), 'Host compiler appears to require libatomic for 64-bit operations, but cannot find it.')
-	has_working_cxx_atomics = compiler.compiles(cxx_atomics64_check_code, dependencies: libatomic_dep, name: 'std::atomic<uint64_t> with libatomic')
+	has_working_cxx_atomics = compiler.links(cxx_atomics64_check_code, dependencies: libatomic_dep, name: 'std::atomic<uint64_t> with libatomic')
 	assert(has_working_cxx_atomics, 'Host compiler must support 64-bit std::atomic')
 	deps_libpistache += libatomic_dep
 endif
@@ -81,30 +86,31 @@ if get_option('PISTACHE_USE_SSL')
 	deps_libpistache += dependency('openssl')
 endif
 
-version_data_raw = ''
+version_array = []
 if meson.version().version_compare('>=0.57.0')
-	fs = import('fs')
-	version_data_raw = fs.read('version.txt').split('\n')
+	version_array = import('fs').read('version.txt').strip().split('.')
 else
 	# Ugly workaround for reading a file
-	version_data_raw = run_command(
-		find_program('python3'), '-c', 'print(open("version.txt").read())'
-	).stdout().strip().split('\n')
+	version_array = run_command(
+		import('python').find_installation(), '-c', 'print(open("version.txt").read())'
+	).stdout().strip().split('.')
 endif
-version_data_conf = configuration_data()
-foreach _ : version_data_raw
-	if _ != ''
-		__ = _.split(' ')
-		version_data_conf.set(__[0], __[-1])
-	endif
-endforeach
 
-pistache_version_str = '.'.join([version_data_conf.get_unquoted('VERSION_MAJOR'), version_data_conf.get_unquoted('VERSION_MINOR'), version_data_conf.get_unquoted('VERSION_PATCH')])
-pistache_soversion_str = '.'.join([version_data_conf.get_unquoted('SONAME_VERSION_MAJOR'), version_data_conf.get_unquoted('SONAME_VERSION_MINOR')])
+version_major    = version_array[0]
+version_minor    = version_array[1]
+version_patch    = version_array[2]
+version_git_date = version_array[3]
+version_str      = '@0@.@1@.@2@'.format(version_major, version_minor, version_patch)
+
+version_conf = configuration_data()
+version_conf.set('VERSION_MAJOR',    version_major)
+version_conf.set('VERSION_MINOR',    version_minor)
+version_conf.set('VERSION_PATCH',    version_patch)
+version_conf.set('VERSION_GIT_DATE', version_git_date)
 
 incl_pistache = include_directories('include')
 
-subdir('include')
+subdir('include'/'pistache')
 subdir('src')
 if get_option('PISTACHE_BUILD_TESTS')
 	subdir('tests')

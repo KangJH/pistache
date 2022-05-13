@@ -77,6 +77,7 @@ Currently Pistache is built and tested on a number of [architectures](https://wi
 - armhf
 - i386
 - ppc64el
+- riscv64
 - s390x
 
 #### Ubuntu PPA (Unstable)
@@ -206,7 +207,7 @@ $ meson compile -C build
 $ meson install -C build
 ```
 
-Optionally, you can also run the tests:
+Optionally, you can also run the tests. You can skip tests requiring network access with `--no-suite=network`:
 
 ```sh
 $ meson test -C build
@@ -220,7 +221,6 @@ Some other Meson options:
 | ----------------------------- | ------- | ---------------------------------------------- |
 | PISTACHE_USE_SSL              | False   | Build server with SSL support                  |
 | PISTACHE_BUILD_TESTS          | False   | Build all of the unit tests                    |
-| PISTACHE_ENABLE_NETWORK_TESTS | True    | Run unit tests requiring remote network access |
 | PISTACHE_BUILD_EXAMPLES       | False   | Build all of the example apps                  |
 | PISTACHE_BUILD_DOCS           | False   | Build Doxygen docs                             |
 
